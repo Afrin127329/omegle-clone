@@ -1,0 +1,20 @@
+body {
+  background-color: rgb(173, 173, 238);
+  margin: 0 auto;
+  padding: 0;
+  width: 100%;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.parent {
+  display: flex;
+  flex-direction: column;
+  width: 10rem;
+  gap: 1rem;
+  justify-content: center;
+}
