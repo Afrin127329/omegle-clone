@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 
-interface User {
+export interface User {
   user: string;
   socket: Socket;
 }
@@ -33,4 +33,24 @@ export class UserManager {
     // Update the queue except the found user that has been matched already
     this.queue = this.queue.filter((x) => x === socketId);
   }
+
+  clearQueue() {
+    if (this.users.length < 2) {
+      return;
+    }
+    // Extracting last Users from the queue
+    const user1 = this.users.find((x) => x.socket.id === this.queue.pop());
+    const user2 = this.users.find((x) => x.socket.id === this.queue.pop());
+    if (!user1 || !user2) {
+      return;
+    }
+
+    // If we have our users, then pass them to the roomManager
+    // logic
+
+    // After that clear the queue
+    this.clearQueue();
+  }
+
+  // Init Handlers
 }
