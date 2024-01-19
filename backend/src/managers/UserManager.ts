@@ -29,7 +29,11 @@ export class UserManager {
     const user = this.users.find((x) => x.socket.id === socketId);
 
     // Update the users Array
-    this.users = this.users.filter((x) => x.socket.id !== socketId);
+    const index = this.users.findIndex((user) => user.socket.id === socketId);
+    if (index !== -1) {
+      return this.users.splice(index, 1)[0];
+    }
+
     // Update the queue except the found user that has been matched already
     this.queue = this.queue.filter((x) => x === socketId);
   }
@@ -39,8 +43,12 @@ export class UserManager {
       return;
     }
     // Extracting last Users from the queue
-    const user1 = this.users.find((x) => x.socket.id === this.queue.pop());
-    const user2 = this.users.find((x) => x.socket.id === this.queue.pop());
+    const user1 = this.users.find(
+      (user) => user.socket.id === this.queue.splice(0, 1)[0]
+    );
+    const user2 = this.users.find(
+      (user) => user.socket.id === this.queue.splice(0, 1)[0]
+    );
     if (!user1 || !user2) {
       return;
     }
@@ -51,6 +59,4 @@ export class UserManager {
     // After that clear the queue
     this.clearQueue();
   }
-
-  // Init Handlers
 }

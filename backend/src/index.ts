@@ -13,9 +13,17 @@ const io = new Server(server, {
 });
 
 app.use(bodyParser.json());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+});
 
 app.get("/", (req, res) => {
-  res.send("<h1>Hello world</h1>");
+  res.send("<h1>Hello from Server</h1>");
 });
 
 // Create a new user manager
@@ -28,7 +36,7 @@ io.on("connection", (socket: Socket) => {
   // @ts-ignore
   userManager.createUser(user, socket);
 
-  // remove the user
+  // remove the user if he leaves the room
   io.on("disconnect", (socket: Socket) => {
     userManager.deleteUser(socket.id);
   });
