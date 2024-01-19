@@ -2,6 +2,7 @@ import bodyParser from "body-parser";
 import express from "express";
 import { createServer } from "node:http";
 import { Server, Socket } from "socket.io";
+import { RoomManager } from "./managers/RoomManager";
 import { UserManager } from "./managers/UserManager";
 
 const app = express();
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
 
 // Create a new user manager
 const userManager = new UserManager();
+const roomManager = new RoomManager();
 
 io.on("connection", (socket: Socket) => {
   console.log("a user connected");
@@ -35,6 +37,10 @@ io.on("connection", (socket: Socket) => {
   const user = socket.handshake.query.name;
   // @ts-ignore
   userManager.createUser(user, socket);
+
+  socket.on("offer", (socket) => {
+    roomManager.onOffer(socket);
+  });
 
   // remove the user if he leaves the room
   io.on("disconnect", (socket: Socket) => {

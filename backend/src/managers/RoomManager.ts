@@ -1,3 +1,4 @@
+import { Socket } from "socket.io";
 import { User } from "./UserManager";
 
 const roomId = Math.random().toString();
@@ -19,6 +20,7 @@ export class RoomManager {
       user1,
       user2,
     });
+    console.log("Creating room");
 
     // Send a message to User1
     user1.socket.emit("on-offer", {
@@ -29,18 +31,17 @@ export class RoomManager {
     user2.socket.emit("on-offer", {
       roomId,
     });
+
+    // create the room
   }
 
   // Logic on Offer
-  onOffer(roomId: string, sdp: string, senderSocketid: string) {
+  onOffer(socket: Socket) {
     const room = this.rooms.get(roomId);
     if (!room) {
       return;
     }
-    const receivingUser =
-      room.user1.socket.id === senderSocketid ? room.user2 : room.user1;
-    receivingUser?.socket.emit("offer", {
-      sdp,
+    socket.emit("offer", {
       roomId,
     });
   }
