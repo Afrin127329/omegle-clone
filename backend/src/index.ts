@@ -41,6 +41,9 @@ io.on("connection", (socket: Socket) => {
   socket.on("offer", (socket) => {
     roomManager.onOffer(socket);
   });
+  socket.on("message", (message: string) => {
+    console.log(message);
+  });
 
   // remove the user if he leaves the room
   io.on("disconnect", (socket: Socket) => {

@@ -35,7 +35,7 @@ export class RoomManager {
     // create the room
   }
 
-  // Logic on Offer
+  // Send offer to the second client
   onOffer(socket: Socket) {
     const room = this.rooms.get(roomId);
     if (!room) {
@@ -43,6 +43,7 @@ export class RoomManager {
     }
     socket.emit("offer", {
       roomId,
+      socket,
     });
   }
 
