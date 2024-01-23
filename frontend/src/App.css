@@ -2,19 +2,62 @@ body {
   background-color: rgb(173, 173, 238);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 #root {
-  width: 30%;
-  margin: 0 auto;
-  display: flex;
-  padding: 2rem;
+  width: 100%;
+  margin: 0.5rem auto;
+  height: 100%;
 }
-
-.parent {
+.container {
   display: flex;
   flex-direction: column;
-  width: 10rem;
   gap: 1rem;
+  align-items: center;
+}
+
+h1 {
+  font-size: 50px;
+  line-height: 20px;
+}
+.video {
+  display: flex;
+  gap: 3rem;
   justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.video video {
+  border: 2px solid black;
+}
+.btn {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+  width: 20rem;
+}
+.btn input {
+  padding: 1rem;
+  outline: none;
+  border-radius: 20px;
+  border: none;
+}
+::-webkit-input-placeholder {
+  text-align: center;
+  font-size: 20px;
+}
+
+.btn button {
+  padding: 0.5rem;
+  background-color: rgb(203, 205, 236);
+  border-radius: 20px;
+  border: none;
+  font-size: 20px;
+}
+.btn button:hover {
+  padding: 0.5rem;
+  cursor: pointer;
+  background-color: rgb(13, 128, 13);
+  color: white;
 }
