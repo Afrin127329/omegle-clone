@@ -59,6 +59,7 @@ socket.on("message", (e) => {
 export async function makeCall() {
   try {
     pc = new RTCPeerConnection(config);
+
     pc.onicecandidate = (e) => {
       const message: any = {
         type: "candidate",
@@ -71,17 +72,22 @@ export async function makeCall() {
       }
       socket.emit("message", message);
     };
+
     pc.ontrack = (e) => {
       remoteVideo.current.srcObject = e.streams[0];
     };
+
     localStream.getTracks().forEach((track: any) => {
       pc.addTrack(track, localStream);
     });
+
     const offer = await pc.createOffer();
+
     socket.emit("message", {
       type: "offer",
       sdp: offer.sdp,
     });
+
     await pc.setRemoteDescription(offer);
   } catch (error) {
     console.log(error);
