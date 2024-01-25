@@ -2,8 +2,6 @@ import bodyParser from "body-parser";
 import express from "express";
 import { createServer } from "node:http";
 import { Server, Socket } from "socket.io";
-import { RoomManager } from "./managers/RoomManager";
-import { UserManager } from "./managers/UserManager";
 
 const app = express();
 const server = createServer(app);
@@ -13,6 +11,7 @@ const io = new Server(server, {
   },
 });
 
+// middlewares
 app.use(bodyParser.json());
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -23,31 +22,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Initial route
 app.get("/", (req, res) => {
-  res.send("<h1>Hello from Server</h1>");
+  res.status(200).send("<h1>Hello from Server</h1>");
 });
 
-// Create a new user manager
-const userManager = new UserManager();
-const roomManager = new RoomManager();
-
 io.on("connection", (socket: Socket) => {
-  console.log("a user connected");
+  console.log("User connected");
   // grab the name from the input box from front end
   const user = socket.handshake.query.name;
-  // @ts-ignore
-  userManager.createUser(user, socket);
 
-  socket.on("offer", (socket) => {
-    roomManager.onOffer(socket);
-  });
   socket.on("message", (message: string) => {
-    console.log(message);
+    socket.broadcast.emit("message", message);
   });
 
-  // remove the user if he leaves the room
+  // On disconnection
   io.on("disconnect", (socket: Socket) => {
-    userManager.deleteUser(socket.id);
+    socket.broadcast.emit("disconnected", "User Disconnected!");
   });
 });
 server.listen(3000, () => {
