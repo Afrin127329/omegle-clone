@@ -177,7 +177,7 @@ async function hangup() {
 }
 
 const Home = () => {
-  const startButton = useRef(null);
+  const startBtn = useRef(null);
   const hangupButton = useRef<HTMLButtonElement>(null);
   const muteAudButton = useRef<HTMLButtonElement>(null);
   const localVideo = useRef<HTMLVideoElement>(null);
@@ -200,13 +200,16 @@ const Home = () => {
         video: true,
         audio: { echoCancellation: true },
       });
-      if (localVideo.current) {
-        localVideo.current.srcObject = localStream;
+      if (!localVideo.current) {
+        return;
       }
+      localVideo.current.srcObject = localStream;
     } catch (err) {
       console.log(err);
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     startBtn.current.disabled = true;
     if (hangupButton.current) {
       hangupButton.current.disabled = false;
@@ -266,11 +269,7 @@ const Home = () => {
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
         />
-        <button
-          className="btn-item btn-start"
-          ref={startButton}
-          onClick={startB}
-        >
+        <button className="btn-item btn-start" ref={startBtn} onClick={startB}>
           {" "}
           <FiVideo /> Join Room
         </button>
