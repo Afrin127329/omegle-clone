@@ -1,19 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { FiMic, FiMicOff, FiVideo, FiVideoOff } from "react-icons/fi";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { io } from "socket.io-client";
 
-// Variables
-let pc: any;
-let localStream: any;
-let startBtn: { current: { disabled: boolean } };
-let hangupButton: { current: { disabled: boolean } };
-let muteAudButton: { current: { disabled: boolean } };
-let remoteVideo: any;
-
-// Ice server Config for Ice Candidates
-const config = {
+const configuration = {
   iceServers: [
     {
       urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"],
@@ -21,15 +11,20 @@ const config = {
   ],
   iceCandidatePoolSize: 10,
 };
-
 const socket = io("http://localhost:3000", { transports: ["websocket"] });
 
+let pc: any;
+let localStream: any;
+let startButton: any;
+let hangupButton: any;
+let muteAudButton: any;
+let remoteVideo: any;
+let localVideo: any;
 socket.on("message", (e) => {
   if (!localStream) {
-    console.log("Connection not Ready");
+    console.log("not ready yet");
     return;
   }
-
   switch (e.type) {
     case "offer":
       handleOffer(e);
@@ -41,8 +36,9 @@ socket.on("message", (e) => {
       handleCandidate(e);
       break;
     case "ready":
+      // A second tab joined. This tab will initiate a call unless in a call already.
       if (pc) {
-        console.log("Already Call in progress");
+        console.log("already in call, ignoring");
         return;
       }
       makeCall();
@@ -53,62 +49,15 @@ socket.on("message", (e) => {
       }
       break;
     default:
-      console.log("Unhandled", e);
+      console.log("unhandled", e);
       break;
   }
 });
 
 async function makeCall() {
   try {
-    pc = new RTCPeerConnection(config);
-
-    pc.onicecandidate = (e: {
-      candidate: { candidate: any; sdpMid: any; sdpMLineIndex: any };
-    }) => {
-      const message: any = {
-        type: "candidate",
-        candidate: "",
-      };
-      if (e.candidate) {
-        message.candidate = e.candidate.candidate;
-        message.sdpMid = e.candidate.sdpMid;
-        message.sdpMLineIndex = e.candidate.sdpMLineIndex;
-      }
-      socket.emit("message", message);
-    };
-
-    pc.ontrack = (e: { streams: any[] }) => {
-      remoteVideo.current.srcObject = e.streams[0];
-    };
-
-    localStream.getTracks().forEach((track: any) => {
-      pc.addTrack(track, localStream);
-    });
-
-    const offer = await pc.createOffer();
-
-    socket.emit("message", {
-      type: "offer",
-      sdp: offer.sdp,
-    });
-
-    await pc.setRemoteDescription(offer);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function handleOffer(offer: any) {
-  if (pc) {
-    console.error("Peer connection Exists");
-    return;
-  }
-
-  try {
-    pc = new RTCPeerConnection(config);
-    pc.onicecandidate = (e: {
-      candidate: { candidate: any; sdpMid: any; sdpMLineIndex: any };
-    }) => {
+    pc = new RTCPeerConnection(configuration);
+    pc.onicecandidate = (e: any) => {
       const message: any = {
         type: "candidate",
         candidate: null,
@@ -120,79 +69,102 @@ async function handleOffer(offer: any) {
       }
       socket.emit("message", message);
     };
-    pc.ontrack = async (e: { streams: any[] }) => {
-      remoteVideo.current.srcObject = e.streams[0];
-      localStream
-        .getTracks()
-        .forEach((track: any) => pc.addTrack(track, localStream));
-      await pc.setRemoteDescription(offer);
+    pc.ontrack = (e: { streams: any[] }) =>
+      (remoteVideo.current.srcObject = e.streams[0]);
+    localStream
+      .getTracks()
+      .forEach((track: any) => pc.addTrack(track, localStream));
+    const offer = await pc.createOffer();
+    socket.emit("message", { type: "offer", sdp: offer.sdp });
+    await pc.setLocalDescription(offer);
+  } catch (e) {
+    console.log(e);
+  }
+}
 
-      const answer = await pc.createAnswer();
-      socket.emit("message", { type: "answer", sdp: answer.sdp });
-      await pc.setLocalDescription(answer);
+async function handleOffer(offer: any) {
+  if (pc) {
+    console.error("existing peerconnection");
+    return;
+  }
+  try {
+    pc = new RTCPeerConnection(configuration);
+    pc.onicecandidate = (e: any) => {
+      const message: any = {
+        type: "candidate",
+        candidate: null,
+      };
+      if (e.candidate) {
+        message.candidate = e.candidate.candidate;
+        message.sdpMid = e.candidate.sdpMid;
+        message.sdpMLineIndex = e.candidate.sdpMLineIndex;
+      }
+      socket.emit("message", message);
     };
-  } catch (error) {
-    console.log(error);
+    pc.ontrack = (e: any) => (remoteVideo.current.srcObject = e.streams[0]);
+    localStream
+      .getTracks()
+      .forEach((track: any) => pc.addTrack(track, localStream));
+    await pc.setRemoteDescription(offer);
+
+    const answer = await pc.createAnswer();
+    socket.emit("message", { type: "answer", sdp: answer.sdp });
+    await pc.setLocalDescription(answer);
+  } catch (e) {
+    console.log(e);
   }
 }
 
 async function handleAnswer(answer: any) {
   if (!pc) {
-    console.error("No Peer Connection");
+    console.error("no peerconnection");
     return;
   }
   try {
     await pc.setRemoteDescription(answer);
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }
 
 async function handleCandidate(candidate: any) {
   try {
     if (!pc) {
-      console.error("No Peer Connection");
+      console.error("no peerconnection");
       return;
     }
-    if (candidate) {
+    if (!candidate) {
+      await pc.addIceCandidate(null);
+    } else {
       await pc.addIceCandidate(candidate);
     }
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }
-
 async function hangup() {
   if (pc) {
     pc.close();
     pc = null;
   }
-  localStream.getTracks().forEach((track: any) => {
-    track.stop();
-  });
+  localStream.getTracks().forEach((track: any) => track.stop());
   localStream = null;
-  startBtn.current.disabled = false;
+  startButton.current.disabled = false;
   hangupButton.current.disabled = true;
   muteAudButton.current.disabled = true;
 }
 
-const Home = () => {
-  const startBtn = useRef(null);
-  const hangupButton = useRef<HTMLButtonElement>(null);
-  const muteAudButton = useRef<HTMLButtonElement>(null);
-  const localVideo = useRef<HTMLVideoElement>(null);
-  const remoteVideo = useRef(null);
-  const [name, setName] = useState("");
-  const [audiostate, setAudio] = useState(false);
-
+function App() {
+  startButton = useRef(null);
+  hangupButton = useRef(null);
+  muteAudButton = useRef(null);
+  localVideo = useRef(null);
+  remoteVideo = useRef(null);
   useEffect(() => {
-    if (hangupButton.current) {
-      hangupButton.current.disabled = true;
-    }
-    if (muteAudButton.current) {
-      muteAudButton.current.disabled = true;
-    }
+    hangupButton.current.disabled = true;
+    muteAudButton.current.disabled = true;
   }, []);
+  const [audiostate, setAudio] = useState(false);
 
   const startB = async () => {
     try {
@@ -200,23 +172,15 @@ const Home = () => {
         video: true,
         audio: { echoCancellation: true },
       });
-      if (!localVideo.current) {
-        return;
-      }
       localVideo.current.srcObject = localStream;
     } catch (err) {
       console.log(err);
     }
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    startBtn.current.disabled = true;
-    if (hangupButton.current) {
-      hangupButton.current.disabled = false;
-    }
-    if (muteAudButton.current) {
-      muteAudButton.current.disabled = false;
-    }
+    startButton.current.disabled = true;
+    hangupButton.current.disabled = false;
+    muteAudButton.current.disabled = false;
+
     socket.emit("message", { type: "ready" });
   };
 
@@ -227,67 +191,63 @@ const Home = () => {
 
   function muteAudio() {
     if (audiostate) {
-      if (localVideo.current) {
-        localVideo.current.muted = true;
-      }
+      localVideo.current.muted = true;
       setAudio(false);
     } else {
-      if (localVideo.current) {
-        localVideo.current.muted = false;
-      }
+      localVideo.current.muted = false;
       setAudio(true);
     }
   }
 
-  const handleSubmit = () => {};
   return (
-    <div className="container">
-      <h1>Welcome to Chat Room</h1>
-      <div className="video">
-        <video
-          width={400}
-          height={400}
-          controls
-          ref={localVideo}
-          autoPlay
-          playsInline
-          src=""
-        />
-        <video
-          width={400}
-          height={400}
-          controls
-          ref={remoteVideo}
-          autoPlay
-          playsInline
-          src=""
-        />
-      </div>
-      <form className="btn" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
-        />
-        <button className="btn-item btn-start" ref={startBtn} onClick={startB}>
-          {" "}
-          <FiVideo /> Join Room
-        </button>
-        <button className="btn-item btn-end" ref={hangupButton} onClick={hangB}>
-          {" "}
-          <FiVideoOff />
-        </button>
-        <button
-          className="btn-item btn-start"
-          ref={muteAudButton}
-          onClick={muteAudio}
-        >
-          {" "}
-          {audiostate ? <FiMic /> : <FiMicOff />}
-        </button>
-      </form>
-    </div>
-  );
-};
+    <>
+      <main className="container  ">
+        <div className="video bg-main">
+          <video
+            ref={localVideo}
+            className="video-item"
+            autoPlay
+            playsInline
+            src=" "
+          ></video>
+          <video
+            ref={remoteVideo}
+            className="video-item"
+            autoPlay
+            playsInline
+            src=" "
+          ></video>
+        </div>
 
-export default Home;
+        <div className="btn">
+          <button
+            className="btn-item btn-start"
+            ref={startButton}
+            onClick={startB}
+          >
+            {" "}
+            <FiVideo />
+          </button>
+          <button
+            className="btn-item btn-end"
+            ref={hangupButton}
+            onClick={hangB}
+          >
+            {" "}
+            <FiVideoOff />
+          </button>
+          <button
+            className="btn-item btn-start"
+            ref={muteAudButton}
+            onClick={muteAudio}
+          >
+            {" "}
+            {audiostate ? <FiMic /> : <FiMicOff />}
+          </button>
+        </div>
+      </main>
+    </>
+  );
+}
+
+export default App;
